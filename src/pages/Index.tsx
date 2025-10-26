@@ -2,27 +2,40 @@ import { useState } from "react";
 import { FileDropzone } from "@/components/FileDropzone";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ResultsSection } from "@/components/ResultsSection";
+import { ColumnRenaming } from "@/components/ColumnRenaming";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { FileSpreadsheet, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface ComparisonResult {
-  totalRows: number;
-  addedRows: number;
-  modifiedRows: number;
-  deletedRows: number;
-  unchangedRows: number;
+  totalRecords: number;
+  unchanged: number;
+  changed: number;
+  newRecord: number;
+  multipleMatches: number;
+}
+
+interface ColumnRenamePair {
+  id: string;
+  oldName: string;
+  newName: string;
 }
 
 const Index = () => {
   const [newFile, setNewFile] = useState<File | null>(null);
   const [oldFile, setOldFile] = useState<File | null>(null);
-  const [keyColumn, setKeyColumn] = useState("");
-  const [sheetName, setSheetName] = useState("");
+  const [useCaseName, setUseCaseName] = useState("");
+  const [latestSheetName, setLatestSheetName] = useState("");
+  const [oldSheetName, setOldSheetName] = useState("");
+  const [primaryKeys, setPrimaryKeys] = useState("");
+  const [columnsToSkip, setColumnsToSkip] = useState("");
+  const [filterColumn, setFilterColumn] = useState("");
+  const [columnRenames, setColumnRenames] = useState<ColumnRenamePair[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ComparisonResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +48,18 @@ const Index = () => {
       return;
     }
 
-    if (!keyColumn.trim()) {
-      setError("Please enter a key column name");
+    if (!useCaseName.trim()) {
+      setError("Please enter a use case name");
+      return;
+    }
+
+    if (!latestSheetName.trim() || !oldSheetName.trim()) {
+      setError("Please enter both latest and old file sheet names");
+      return;
+    }
+
+    if (!primaryKeys.trim()) {
+      setError("Please enter at least one primary key");
       return;
     }
 
@@ -50,11 +73,11 @@ const Index = () => {
       
       // Mock results
       const mockResults: ComparisonResult = {
-        totalRows: 1500,
-        addedRows: 145,
-        modifiedRows: 87,
-        deletedRows: 23,
-        unchangedRows: 1245,
+        totalRecords: 1500,
+        unchanged: 1245,
+        changed: 87,
+        newRecord: 145,
+        multipleMatches: 23,
       };
 
       setResults(mockResults);
@@ -111,13 +134,29 @@ const Index = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="useCaseName">Use Case Name *</Label>
+              <Input
+                id="useCaseName"
+                placeholder="e.g., Q4_Sales_Comparison"
+                value={useCaseName}
+                onChange={(e) => setUseCaseName(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                This name is used to generate the output files
+              </p>
+            </div>
+
+            <Separator />
+
             <FileDropzone
-              label="New/Latest File"
+              label="New/Latest File *"
               onFileSelect={setNewFile}
               selectedFile={newFile}
             />
             <FileDropzone
-              label="Old File"
+              label="Old File *"
               onFileSelect={setOldFile}
               selectedFile={oldFile}
             />
@@ -133,39 +172,90 @@ const Index = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="latestSheetName">Latest File Sheet Name *</Label>
+                <Input
+                  id="latestSheetName"
+                  placeholder="e.g., Sheet1, Data"
+                  value={latestSheetName}
+                  onChange={(e) => setLatestSheetName(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="oldSheetName">Old File Sheet Name *</Label>
+                <Input
+                  id="oldSheetName"
+                  placeholder="e.g., Sheet1, Data"
+                  value={oldSheetName}
+                  onChange={(e) => setOldSheetName(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="keyColumn">Key Column Name *</Label>
-              <Input
-                id="keyColumn"
-                placeholder="e.g., ID, ProductCode, Email"
-                value={keyColumn}
-                onChange={(e) => setKeyColumn(e.target.value)}
-                className="w-full"
+              <Label htmlFor="primaryKeys">Primary Key(s) *</Label>
+              <Textarea
+                id="primaryKeys"
+                placeholder="Enter comma-separated key columns, e.g., ID, ProductCode"
+                value={primaryKeys}
+                onChange={(e) => setPrimaryKeys(e.target.value)}
+                className="w-full min-h-[80px]"
               />
               <p className="text-xs text-muted-foreground">
-                The column used to match rows between files
+                The column(s) used to match rows between files (comma-separated)
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sheetName">Sheet Name (Optional)</Label>
+              <Label htmlFor="columnsToSkip">Columns to Skip in Comparison</Label>
+              <Textarea
+                id="columnsToSkip"
+                placeholder="Enter comma-separated column names to skip, e.g., LastModified, CreatedDate"
+                value={columnsToSkip}
+                onChange={(e) => setColumnsToSkip(e.target.value)}
+                className="w-full min-h-[80px]"
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional: Columns that should be excluded from comparison
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterColumn">Filter Column</Label>
               <Input
-                id="sheetName"
-                placeholder="e.g., Sheet1, Data"
-                value={sheetName}
-                onChange={(e) => setSheetName(e.target.value)}
+                id="filterColumn"
+                placeholder="e.g., Region, Status"
+                value={filterColumn}
+                onChange={(e) => setFilterColumn(e.target.value)}
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                Leave empty to use the first sheet
+                Optional: Column used to create additional filtered output sheets
               </p>
             </div>
+
+            <ColumnRenaming
+              pairs={columnRenames}
+              onChange={setColumnRenames}
+            />
 
             <Separator className="my-6" />
 
             <Button
               onClick={handleRunComparison}
-              disabled={isProcessing || !newFile || !oldFile || !keyColumn.trim()}
+              disabled={
+                isProcessing || 
+                !newFile || 
+                !oldFile || 
+                !useCaseName.trim() ||
+                !latestSheetName.trim() ||
+                !oldSheetName.trim() ||
+                !primaryKeys.trim()
+              }
               size="lg"
               className="w-full"
             >

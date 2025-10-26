@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/table";
 
 interface ComparisonResult {
-  totalRows: number;
-  addedRows: number;
-  modifiedRows: number;
-  deletedRows: number;
-  unchangedRows: number;
+  totalRecords: number;
+  unchanged: number;
+  changed: number;
+  newRecord: number;
+  multipleMatches: number;
 }
 
 interface ResultsSectionProps {
@@ -26,11 +26,11 @@ interface ResultsSectionProps {
 
 export const ResultsSection = ({ results, onDownload, isDownloading }: ResultsSectionProps) => {
   const summaryData = [
-    { label: "Total Rows", value: results.totalRows, variant: "default" },
-    { label: "Added Rows", value: results.addedRows, variant: "success" },
-    { label: "Modified Rows", value: results.modifiedRows, variant: "warning" },
-    { label: "Deleted Rows", value: results.deletedRows, variant: "error" },
-    { label: "Unchanged Rows", value: results.unchangedRows, variant: "muted" },
+    { label: "Total Records", value: results.totalRecords },
+    { label: "Unchanged", value: results.unchanged },
+    { label: "To be updated in cloud (Changed)", value: results.changed },
+    { label: "To be updated in cloud (New Record)", value: results.newRecord },
+    { label: "Deep dive review and update (Multiple Matches)", value: results.multipleMatches },
   ];
 
   return (
