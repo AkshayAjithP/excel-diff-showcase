@@ -3,9 +3,10 @@ import { AlertBanner } from "@/components/AlertBanner";
 import { ResultsSection } from "@/components/ResultsSection";
 import { MultiUseCaseConfiguration } from "@/components/MultiUseCaseConfiguration";
 import { UseCaseConfiguration } from "@/components/UseCaseConfig";
+import { UseCaseSummary } from "@/components/UseCaseSummary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileSpreadsheet, PlayCircle } from "lucide-react";
+import { FileSpreadsheet, PlayCircle, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 interface ComparisonResult {
@@ -97,74 +98,108 @@ const Index = () => {
     }
   };
 
+  const hasValidConfigs = useCaseConfigs.some(c => 
+    c.newFile && 
+    c.oldFile && 
+    c.useCaseName.trim() && 
+    c.latestSheetName.trim() && 
+    c.oldSheetName.trim() && 
+    c.primaryKeys.trim()
+  );
+
   return (
-    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 sm:px-6 lg:px-8">
       {error && (
-        <AlertBanner 
-          message={error} 
-          onClose={() => setError(null)} 
-          variant="error"
-        />
+        <div className="max-w-5xl mx-auto mb-6">
+          <AlertBanner 
+            message={error} 
+            onClose={() => setError(null)} 
+            variant="error"
+          />
+        </div>
       )}
 
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3">
-            <FileSpreadsheet className="w-10 h-10 text-primary" />
-            <h1 className="text-4xl font-bold text-foreground">
-              Excel File Comparison - Batch Processing
-            </h1>
+        <div className="text-center space-y-4 pb-4">
+          <div className="flex items-center justify-center gap-3 animate-fade-in">
+            <div className="p-3 bg-primary/10 rounded-2xl">
+              <FileSpreadsheet className="w-12 h-12 text-primary" />
+            </div>
           </div>
-          <p className="text-muted-foreground">
-            Configure and execute multiple file comparisons simultaneously
-          </p>
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight">
+              Excel File Comparison
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Configure and execute multiple file comparisons simultaneously with intelligent batch processing
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <Layers className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Batch Processing Enabled</span>
+          </div>
         </div>
 
         {/* Multi-Use Case Configuration Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Use Case Configuration</CardTitle>
-            <CardDescription>
-              Add multiple use cases, each with its own files and settings
+        <Card className="shadow-lg border-2">
+          <CardHeader className="space-y-1 pb-6">
+            <CardTitle className="text-2xl">Use Case Configuration</CardTitle>
+            <CardDescription className="text-base">
+              Add multiple use cases, each with its own files and settings. Follow the step-by-step process for each comparison.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <MultiUseCaseConfiguration
               configs={useCaseConfigs}
               onChange={setUseCaseConfigs}
             />
 
-            <Button
-              onClick={handleRunComparison}
-              disabled={
-                isProcessing || 
-                useCaseConfigs.length === 0 ||
-                useCaseConfigs.some(c => 
-                  !c.newFile || 
-                  !c.oldFile || 
-                  !c.useCaseName.trim() || 
-                  !c.latestSheetName.trim() || 
-                  !c.oldSheetName.trim() || 
-                  !c.primaryKeys.trim()
-                )
-              }
-              size="lg"
-              className="w-full mt-6"
-            >
-              <PlayCircle className="w-5 h-5 mr-2" />
-              {isProcessing ? "Processing..." : `Run Comparison (${useCaseConfigs.length} Use Case${useCaseConfigs.length !== 1 ? 's' : ''})`}
-            </Button>
+            {/* Summary Section */}
+            {useCaseConfigs.length > 0 && (
+              <div className="pt-4">
+                <UseCaseSummary configs={useCaseConfigs} />
+              </div>
+            )}
+
+            {/* Run Button */}
+            <div className="pt-4">
+              <Button
+                onClick={handleRunComparison}
+                disabled={
+                  isProcessing || 
+                  !hasValidConfigs
+                }
+                size="lg"
+                className="w-full h-14 text-lg font-semibold shadow-md hover:shadow-lg transition-smooth"
+              >
+                <PlayCircle className="w-6 h-6 mr-2" />
+                {isProcessing 
+                  ? "Processing Comparisons..." 
+                  : `Run All Comparisons (${useCaseConfigs.filter(c => 
+                      c.newFile && c.oldFile && c.useCaseName.trim() && 
+                      c.latestSheetName.trim() && c.oldSheetName.trim() && c.primaryKeys.trim()
+                    ).length} Ready)`
+                }
+              </Button>
+              {!hasValidConfigs && useCaseConfigs.length > 0 && (
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Complete at least one use case configuration to run comparisons
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Results Section */}
         {results && (
-          <ResultsSection
-            results={results}
-            onDownload={handleDownloadReport}
-            isDownloading={isDownloading}
-          />
+          <div className="animate-fade-in">
+            <ResultsSection
+              results={results}
+              onDownload={handleDownloadReport}
+              isDownloading={isDownloading}
+            />
+          </div>
         )}
       </div>
     </div>
