@@ -37,7 +37,7 @@ export const MultiUseCaseConfiguration = ({ configs, onChange }: MultiUseCaseCon
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {configs.map((config, index) => (
         <UseCaseConfig
           key={config.id}
@@ -51,11 +51,11 @@ export const MultiUseCaseConfiguration = ({ configs, onChange }: MultiUseCaseCon
       <Button
         onClick={addUseCase}
         variant="outline"
-        className="w-full h-12 text-base hover-scale transition-smooth border-2 border-dashed hover:border-primary hover:bg-primary/5"
+        className="w-full"
         type="button"
       >
-        <Plus className="w-5 h-5 mr-2" />
-        Add Another Use Case
+        <Plus className="w-4 h-4 mr-2" />
+        Add Use Case
       </Button>
     </div>
   );
